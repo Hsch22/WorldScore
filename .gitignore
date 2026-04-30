@@ -141,3 +141,7 @@ log_test/
 
 # ignore test files and folders
 758/
+
+# Ignore local migration archives
+migration_archives/
+migration_archives_*.tar

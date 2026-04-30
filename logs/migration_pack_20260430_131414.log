@@ -1,0 +1,67 @@
+WorldScore migration pack log
+Generated UTC: 2026-04-30 13:14:14
+Repo: /share/project/husicheng/WorldScore
+
+Selection policy from user:
+P1 include: original data sources; support data/results/models for important experiments.
+P2 include if useful: hard-to-redownload external data/models; hard-to-reproduce processed data.
+P3 lower priority: ordinary HF-downloadable data/models.
+Do not migrate: oversized non-original datasets; ModelScope/domestic-downloadable data; reproducible/old-chain data not used by demos.
+
+Generated archives:
+1. migration_archives/worldscore_code_20260430_131414.tar.zst
+   Priority: P1 code/config/support docs.
+   Included roots: .env, .gitignore, .gitmodules, LICENSE, MANIFEST.in, README.md, download.py, pylintrc, requirements/, ruff.toml, setup.py, config/, world_generators/, worldscore/ (excluding metrics/checkpoints), scripts/, assets/, notebooks/, notes/, thirdparty/.
+   Excluded from this code archive: .git metadata, Python cache, worldscore/benchmark/metrics/checkpoints/, thirdparty/DROID-SLAM/build/, thirdparty/DROID-SLAM/droid_backends.egg-info/, thirdparty/Grounded-Segment-Anything/VISAM/visam.gif.
+   Note: .env is included for path reference only; paths are machine-local and should be adjusted after migration. No .secrets file was present.
+
+2. migration_archives/worldscore_dataset_20260430_131414.tar.zst
+   Priority: P1 original WorldScore benchmark dataset currently under data/WorldScore-Dataset/.
+   Included root: data/WorldScore-Dataset/.
+   Reason: source benchmark data; needed to reproduce generation/evaluation inputs.
+
+3. migration_archives/worldscore_experiment_outputs_20260430_131414.tar.zst
+   Priority: P1 existing result/support data.
+   Included root: models/CogVideoX_5b_i2v/worldscore_output/.
+   Reason: current local validation/evaluation output including worldscore.json, frames, image_data/camera_data/evaluation.json.
+
+4. migration_archives/worldscore_eval_required_checkpoints_20260430_131414.tar.zst
+   Priority: P1/P2 evaluation support models used by current main evaluator.
+   Included exact files:
+   - worldscore/benchmark/metrics/checkpoints/groundingdino_swint_ogc.pth
+   - worldscore/benchmark/metrics/checkpoints/sam2.1_hiera_base_plus.pt
+   - worldscore/benchmark/metrics/checkpoints/Tartan-C-T-TSKH-spring540x960-M.pth
+   - worldscore/benchmark/metrics/checkpoints/VFIMamba.pkl
+   - worldscore/benchmark/metrics/checkpoints/droid.pth
+
+Skipped large/redundant candidates:
+   - worldscore/benchmark/metrics/checkpoints/sam_vit_h_4b8939.pth: 2.56GB; external Meta/Facebook download; current main evaluator keeps it only in args/README paths and does not load it in observed object/motion paths.
+   - worldscore/benchmark/metrics/checkpoints/sam2.1_hiera_large.pt: 898MB; current main motion_accuracy uses sam2.1_hiera_base_plus.pt, large variant is README/demo fallback.
+   - worldscore/benchmark/metrics/checkpoints/Tartan-C-T-TSKH-spring540x960-M.safetensors: 78.8MB; duplicate source format after conversion; .pth version included.
+   - worldscore/benchmark/metrics/checkpoints/models/raft-things.pth: 21.1MB; RAFT fallback/alternative metrics only; current main metrics use SEA-RAFT .pth included above.
+   - .venv/, .uv-cache/, logs before this run, pycache/tmp/log files: local/generated, not migration targets.
+   - .git/ and submodule Git metadata: not included in archives; source files and local modified submodule working trees are represented in the code archive.
+
+Archive sizes:
+   210416973 bytes	migration_archives/worldscore_code_20260430_131414.tar.zst
+   1224708208 bytes	migration_archives/worldscore_dataset_20260430_131414.tar.zst
+   1276174815 bytes	migration_archives/worldscore_eval_required_checkpoints_20260430_131414.tar.zst
+   1829007 bytes	migration_archives/worldscore_experiment_outputs_20260430_131414.tar.zst
+
+Archive item counts:
+   4081	migration_archives/worldscore_code_20260430_131414.tar.zst
+   6099	migration_archives/worldscore_dataset_20260430_131414.tar.zst
+   5	migration_archives/worldscore_eval_required_checkpoints_20260430_131414.tar.zst
+   35	migration_archives/worldscore_experiment_outputs_20260430_131414.tar.zst
+
+SHA256:
+   7e06bebd9f9fdc842c7f37753cb68da681e0839a36a5871b78a95185d0a48076  migration_archives/worldscore_code_20260430_131414.tar.zst
+   44498755b681be695d16aa90fe07a1b5a892a8573f32d119fe9218724f0247e9  migration_archives/worldscore_dataset_20260430_131414.tar.zst
+   6a0d2336f7a82ead3b2b40e0db41fac0f60c00b071d47f96667ff635395b818e  migration_archives/worldscore_eval_required_checkpoints_20260430_131414.tar.zst
+   eb2c38f5cff7cf0aa23dee744a893d4c4c46e6718f728320cd7a391e5459ec16  migration_archives/worldscore_experiment_outputs_20260430_131414.tar.zst
+
+Verification:
+   zstd -t completed successfully for all .tar.zst archives.
+
+Current git status note after packaging:
+   Packaging added migration_archives/ and this log under logs/. Existing source changes and untracked files were not reverted.
