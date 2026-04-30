@@ -1,0 +1,21 @@
+_target_: world_generators.memworld_wan22.MemWorldWan22
+model_name: memworld_wan22_i2v
+generation_type: i2v
+
+memworld_root: /share/project/tanhuajie/MemWorld
+model_dir: /share/project/tanhuajie/MemWorld/models/Wan2.2-TI2V-5B
+dit_ckpt_path: /share/project/tanhuajie/MemWorld/playground/multi_nodes_train_data_dl3dv_10k_dynamic_only_ue/tensorboard_logs/wan22_wm/version_0/checkpoints/dit_step25000.ckpt
+memory_dir: /share/project/tanhuajie/MemWorld/assets/dl3dv_memory
+
+height: 352
+width: 640
+frames: 257
+fps: 30
+num_inference_steps: 50
+cfg_scale: 5.0
+seed: 42
+device: cuda
+memory_mode: auto
+memory_max_size: 500
+memory_update_stride: 4
+origin_memory_index: 0

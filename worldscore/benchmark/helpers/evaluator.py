@@ -35,6 +35,35 @@ from worldscore.benchmark.utils.utils import empty_cache, layout_info
 logger = structlog.getLogger()
 
 
+def _metric_result_complete(instance_scores, aspect, metric_name):
+    metric_scores = instance_scores.get(aspect, {}).get(metric_name)
+    return (
+        isinstance(metric_scores, dict)
+        and "score" in metric_scores
+        and "score_normalized" in metric_scores
+    )
+
+
+def _get_cached_aspect_evaluator(
+    cache,
+    metric,
+    metric_type,
+    metric_attribute,
+    aspect,
+    generate_type,
+):
+    cache_key = (aspect, metric)
+    if cache_key not in cache:
+        cache[cache_key] = get_aspect_evaluator(
+            metric,
+            metric_type,
+            metric_attribute,
+            aspect,
+            generate_type,
+        )
+    return cache[cache_key]
+
+
 def process_batch(
     config,
     instance_batch,
@@ -42,6 +71,7 @@ def process_batch(
     visual_movement,
 ):
     evaluator = Evaluator(config)
+    aspect_evaluator_cache = {}
     logger.info("Processing batch", model_name=evaluator.config["model"])
     for instance_attributes in instance_batch:
         if visual_movement == "static":
@@ -68,7 +98,19 @@ def process_batch(
                 metric_list = aspect_info[aspect]["metrics"]
                 metric_type = aspect_info[aspect]["type"]
                 for metric, metric_attribute in metric_list.items():
-                    evaluator.aspect_evaluator = get_aspect_evaluator(metric, metric_type, metric_attribute, aspect, evaluator.generate_type)
+                    instance_scores = evaluator.metrics_results[visual_style][scene_type][category][instance]
+                    if _metric_result_complete(instance_scores, aspect, metric):
+                        print("-- Aspect (metric):", f"{aspect} ({metric}) [skip existing]")
+                        continue
+
+                    evaluator.aspect_evaluator = _get_cached_aspect_evaluator(
+                        aspect_evaluator_cache,
+                        metric,
+                        metric_type,
+                        metric_attribute,
+                        aspect,
+                        evaluator.generate_type,
+                    )
                     
                     print("-- Aspect (metric):", f"{aspect} ({metric})")
 
@@ -128,8 +170,6 @@ def process_batch(
                         instance
                     ][aspect][evaluator.aspect_evaluator.name]["score_normalized"] = score_normalized
 
-                    empty_cache()
-                    
             # save results
             instance_result_dict = evaluator.metrics_results[visual_style][scene_type][category][instance]
             result_file_name = (
@@ -141,6 +181,7 @@ def process_batch(
             )
             with open(result_path, mode="w", encoding="utf-8") as f:
                 json.dump(instance_result_dict, f, indent=4)
+            empty_cache()
                 
         elif visual_movement == "dynamic":
             visual_style, motion_type, instance, instance_dir = instance_attributes
@@ -166,7 +207,19 @@ def process_batch(
                 metric_list = aspect_info[aspect]["metrics"]
                 metric_type = aspect_info[aspect]["type"]
                 for metric, metric_attribute in metric_list.items():
-                    evaluator.aspect_evaluator = get_aspect_evaluator(metric, metric_type, metric_attribute, aspect, evaluator.generate_type)
+                    instance_scores = evaluator.metrics_results[visual_style][motion_type][instance]
+                    if _metric_result_complete(instance_scores, aspect, metric):
+                        print("-- Aspect (metric):", f"{aspect} ({metric}) [skip existing]")
+                        continue
+
+                    evaluator.aspect_evaluator = _get_cached_aspect_evaluator(
+                        aspect_evaluator_cache,
+                        metric,
+                        metric_type,
+                        metric_attribute,
+                        aspect,
+                        evaluator.generate_type,
+                    )
             
                     print("-- Aspect (metric):", f"{aspect} ({metric})")
 
@@ -215,8 +268,6 @@ def process_batch(
                         instance
                     ][aspect][evaluator.aspect_evaluator.name]["score_normalized"] = score_normalized
                     
-                    empty_cache()
-            
             # save results
             instance_result_dict = evaluator.metrics_results[visual_style][motion_type][instance]
             result_file_name = (
@@ -228,6 +279,7 @@ def process_batch(
             )
             with open(result_path, mode="w", encoding="utf-8") as f:
                 json.dump(instance_result_dict, f, indent=4)
+            empty_cache()
     
     return evaluator.metrics_results
     

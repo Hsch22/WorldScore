@@ -124,6 +124,8 @@ cython_debug/
 *.ckpt
 *.pth
 *.pt
+*.safetensors
+worldscore/benchmark/metrics/checkpoints/
 
 # Ignore logs
 *.out

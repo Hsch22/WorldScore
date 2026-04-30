@@ -1,0 +1,9 @@
+model: memworld_wan22_i2v
+
+runs_root: /share/project/tanhuajie/MemWorld/output/worldscore_dit_step25000_dl3dv
+
+resolution: [640, 352]
+generate_type: i2v
+
+frames: 257
+fps: 30
