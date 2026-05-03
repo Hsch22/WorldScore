@@ -1,0 +1,124 @@
+diff --git a/setup.py b/setup.py
+index 9af97d4..0a7c4d8 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,4 +1,5 @@
+ from setuptools import setup
++import torchada  # noqa: F401
+ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+ 
+ import os.path as osp
+@@ -8,7 +9,7 @@ setup(
+     name='droid_backends',
+     ext_modules=[
+         CUDAExtension('droid_backends',
+-            include_dirs=[osp.join(ROOT, 'thirdparty/eigen')],
++            include_dirs=[osp.join(ROOT, 'thirdparty/eigen-headers')],
+             sources=[
+                 'src/droid.cpp', 
+                 'src/droid_kernels.cu',
+@@ -17,14 +18,7 @@ setup(
+             ],
+             extra_compile_args={
+                 'cxx': ['-O3'],
+-                'nvcc': ['-O3',
+-                    '-gencode=arch=compute_60,code=sm_60',
+-                    '-gencode=arch=compute_61,code=sm_61',
+-                    '-gencode=arch=compute_70,code=sm_70',
+-                    '-gencode=arch=compute_75,code=sm_75',
+-                    '-gencode=arch=compute_80,code=sm_80',
+-                    '-gencode=arch=compute_86,code=sm_86',
+-                ]
++                'nvcc': ['-O3', '--musa-path=/usr/local/musa-4.3.2', '--no-musa-version-check']
+             }),
+     ],
+     cmdclass={ 'build_ext' : BuildExtension }
+@@ -40,21 +34,14 @@ setup(
+         CUDAExtension('lietorch_backends', 
+             include_dirs=[
+                 osp.join(ROOT, 'thirdparty/lietorch/lietorch/include'), 
+-                osp.join(ROOT, 'thirdparty/eigen')],
++                osp.join(ROOT, 'thirdparty/eigen-headers')],
+             sources=[
+                 'thirdparty/lietorch/lietorch/src/lietorch.cpp', 
+                 'thirdparty/lietorch/lietorch/src/lietorch_gpu.cu',
+                 'thirdparty/lietorch/lietorch/src/lietorch_cpu.cpp'],
+             extra_compile_args={
+                 'cxx': ['-O2'], 
+-                'nvcc': ['-O2',
+-                    '-gencode=arch=compute_60,code=sm_60', 
+-                    '-gencode=arch=compute_61,code=sm_61', 
+-                    '-gencode=arch=compute_70,code=sm_70', 
+-                    '-gencode=arch=compute_75,code=sm_75',
+-                    '-gencode=arch=compute_80,code=sm_80',
+-                    '-gencode=arch=compute_86,code=sm_86',                 
+-                ]
++                'nvcc': ['-O2', '--musa-path=/usr/local/musa-4.3.2', '--no-musa-version-check']
+             }),
+     ],
+     cmdclass={ 'build_ext' : BuildExtension }
+diff --git a/src/altcorr_kernel.cu b/src/altcorr_kernel.cu
+index f418f5c..5e4a886 100644
+--- a/src/altcorr_kernel.cu
++++ b/src/altcorr_kernel.cu
+@@ -306,7 +306,7 @@ std::vector<torch::Tensor> altcorr_cuda_forward(
+   const dim3 threads(BLOCK_H, BLOCK_W);
+ 
+ 
+-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(fmap1.type(), "altcorr_forward_kernel", ([&] {
++  AT_DISPATCH_FLOATING_TYPES_AND_HALF(fmap1.scalar_type(), "altcorr_forward_kernel", ([&] {
+     altcorr_forward_kernel<scalar_t><<<blocks, threads>>>(
+         fmap1.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+         fmap2.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+@@ -353,4 +353,4 @@ std::vector<torch::Tensor> altcorr_cuda_backward(
+     radius);
+ 
+   return {fmap1_grad, fmap2_grad, coords_grad};
+-}
+\ No newline at end of file
++}
+diff --git a/src/correlation_kernels.cu b/src/correlation_kernels.cu
+index 2812067..25273d7 100644
+--- a/src/correlation_kernels.cu
++++ b/src/correlation_kernels.cu
+@@ -142,7 +142,7 @@ std::vector<torch::Tensor> corr_index_cuda_forward(
+   torch::Tensor corr = torch::zeros(
+     {batch_size, 2*radius+1, 2*radius+1, ht, wd}, opts);
+ 
+-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.type(), "sampler_forward_kernel", ([&] {
++  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.scalar_type(), "sampler_forward_kernel", ([&] {
+     corr_index_forward_kernel<scalar_t><<<blocks, threads>>>(
+       volume.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+       coords.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
+@@ -173,7 +173,7 @@ std::vector<torch::Tensor> corr_index_cuda_backward(
+   const dim3 threads(BLOCK, BLOCK);
+ 
+ 
+-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.type(), "sampler_backward_kernel", ([&] {
++  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.scalar_type(), "sampler_backward_kernel", ([&] {
+     corr_index_backward_kernel<scalar_t><<<blocks, threads>>>(
+       coords.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
+       corr_grad.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+@@ -182,4 +182,4 @@ std::vector<torch::Tensor> corr_index_cuda_backward(
+    }));
+ 
+   return {volume_grad};
+-}
+\ No newline at end of file
++}
+diff --git a/thirdparty/eigen-headers/Eigen b/thirdparty/eigen-headers/Eigen
+new file mode 120000
+index 0000000..ea2bd09
+--- /dev/null
++++ b/thirdparty/eigen-headers/Eigen
+@@ -0,0 +1 @@
++../eigen/Eigen
+\ No newline at end of file
+diff --git a/thirdparty/eigen-headers/unsupported b/thirdparty/eigen-headers/unsupported
+new file mode 120000
+index 0000000..b419ac8
+--- /dev/null
++++ b/thirdparty/eigen-headers/unsupported
+@@ -0,0 +1 @@
++../eigen/unsupported
+\ No newline at end of file

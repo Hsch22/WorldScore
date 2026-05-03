@@ -1,0 +1,80 @@
+diff --git a/lietorch/extras/corr_index_kernel.cu b/lietorch/extras/corr_index_kernel.cu
+index 2f4652f..f00039f 100644
+--- a/lietorch/extras/corr_index_kernel.cu
++++ b/lietorch/extras/corr_index_kernel.cu
+@@ -142,7 +142,7 @@ std::vector<torch::Tensor> corr_index_cuda_forward(
+   torch::Tensor corr = torch::zeros(
+     {batch_size, 2*radius+1, 2*radius+1, ht, wd}, opts);
+ 
+-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.type(), "sampler_forward_kernel", ([&] {
++  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.scalar_type(), "sampler_forward_kernel", ([&] {
+     corr_index_forward_kernel<scalar_t><<<blocks, threads>>>(
+       volume.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+       coords.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
+@@ -173,7 +173,7 @@ std::vector<torch::Tensor> corr_index_cuda_backward(
+   const dim3 threads(BLOCK, BLOCK);
+ 
+ 
+-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.type(), "sampler_backward_kernel", ([&] {
++  AT_DISPATCH_FLOATING_TYPES_AND_HALF(volume.scalar_type(), "sampler_backward_kernel", ([&] {
+     corr_index_backward_kernel<scalar_t><<<blocks, threads>>>(
+       coords.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
+       corr_grad.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+@@ -188,4 +188,3 @@ std::vector<torch::Tensor> corr_index_cuda_backward(
+ 
+ 
+ 
+-
+diff --git a/setup.py b/setup.py
+index 09c8650..e78afbf 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,4 +1,5 @@
+ from setuptools import setup
++import torchada  # noqa: F401
+ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+ 
+ import os.path as osp
+@@ -16,21 +17,14 @@ setup(
+         CUDAExtension('lietorch_backends', 
+             include_dirs=[
+                 osp.join(ROOT, 'lietorch/include'), 
+-                osp.join(ROOT, 'eigen')],
++                osp.join(ROOT, '../eigen-headers')],
+             sources=[
+                 'lietorch/src/lietorch.cpp', 
+                 'lietorch/src/lietorch_gpu.cu',
+                 'lietorch/src/lietorch_cpu.cpp'],
+             extra_compile_args={
+                 'cxx': ['-O2'], 
+-                'nvcc': ['-O2',
+-                    '-gencode=arch=compute_60,code=sm_60', 
+-                    '-gencode=arch=compute_61,code=sm_61', 
+-                    '-gencode=arch=compute_70,code=sm_70', 
+-                    '-gencode=arch=compute_75,code=sm_75',
+-                    '-gencode=arch=compute_75,code=compute_75',
+-                    
+-                ]
++                'nvcc': ['-O2', '--musa-path=/usr/local/musa-4.3.2', '--no-musa-version-check']
+             }),
+ 
+         CUDAExtension('lietorch_extras', 
+@@ -44,17 +38,8 @@ setup(
+             ],
+             extra_compile_args={
+                 'cxx': ['-O2'], 
+-                'nvcc': ['-O2',
+-                    '-gencode=arch=compute_60,code=sm_60', 
+-                    '-gencode=arch=compute_61,code=sm_61', 
+-                    '-gencode=arch=compute_70,code=sm_70', 
+-                    '-gencode=arch=compute_75,code=sm_75',
+-                    '-gencode=arch=compute_75,code=compute_75',
+-                    
+-                ]
++                'nvcc': ['-O2', '--musa-path=/usr/local/musa-4.3.2', '--no-musa-version-check']
+             }),
+     ],
+     cmdclass={ 'build_ext': BuildExtension }
+ )
+-
+-
